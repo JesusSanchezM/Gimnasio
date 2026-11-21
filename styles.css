@@ -417,3 +417,476 @@ input:focus, select:focus, textarea:focus {
   color: var(--muted);
   letter-spacing: 0.06em;
 }
+
+/* ============================================================
+   v1.1 — Estilo de vida, calendarios, dinero
+   ============================================================ */
+
+/* ---------- Group card con subtítulo ---------- */
+.group-sub {
+  font-family: var(--serif);
+  font-size: 15px;
+  color: var(--muted);
+  line-height: 1;
+  margin-top: -4px;
+}
+
+/* ---------- Lista de módulos ---------- */
+.module-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+}
+.module-list li {
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+}
+.module-list a,
+.module-list li > span:first-child {
+  flex: 1;
+  padding: 16px 0;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 15px;
+}
+.module-list a:active { background: var(--surface); }
+.module-list li .row-del { padding-right: 8px; }
+
+/* ---------- Calendario ---------- */
+.monthnav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+.calendar { user-select: none; }
+.cal-head {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 6px;
+}
+.cal-dow {
+  text-align: center;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+  padding-bottom: 4px;
+}
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.cal-cell {
+  aspect-ratio: 1 / 1;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  padding: 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  cursor: pointer;
+  font: inherit;
+  color: var(--ink);
+  overflow: hidden;
+  transition: background .12s;
+}
+.cal-cell:active { background: var(--surface); }
+.cal-cell.cal-empty { background: transparent; border-color: transparent; cursor: default; }
+.cal-cell.cal-today { border-color: var(--ink); }
+.cal-day {
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+}
+.cal-markers { display: flex; flex-wrap: wrap; gap: 2px; }
+.cal-marker {
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  background: var(--ink);
+  color: var(--bg);
+  padding: 1px 3px;
+  border-radius: 2px;
+  line-height: 1;
+}
+
+/* ---------- Panel de día ---------- */
+.day-panel {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.day-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+.day-panel-date { font-family: var(--serif); font-size: 16px; }
+.day-panel-close {
+  background: none;
+  border: none;
+  font-size: 20px;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0 4px;
+}
+.day-options { display: flex; gap: 8px; flex-wrap: wrap; }
+.opt-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.opt-btn.active {
+  background: var(--ink);
+  color: var(--bg);
+  border-color: var(--ink);
+}
+
+/* ---------- Suplementos ---------- */
+.supp-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.supp-list li { border-bottom: 1px solid var(--line); }
+.supp-toggle {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 15px;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+}
+.supp-state {
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.supp-toggle.taken .supp-state { color: var(--ink); }
+
+/* ---------- Metas / finanzas ---------- */
+.goal-list { list-style: none; margin: 0; padding: 0; }
+.goal-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.goal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.goal-name { font-size: 15px; }
+.goal-bar {
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.goal-bar span { display: block; height: 100%; background: var(--ink); }
+.goal-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  margin-bottom: 8px;
+}
+.goal-actions { display: flex; gap: 8px; }
+
+.tx-list { list-style: none; margin: 0; padding: 0; }
+.tx-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.tx-sign {
+  width: 20px;
+  text-align: center;
+  font-weight: 600;
+  font-size: 14px;
+}
+.tx-sign.in  { color: var(--ink); }
+.tx-sign.out { color: var(--muted); }
+.tx-main { flex: 1; display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.tx-amount { font-variant-numeric: tabular-nums; font-size: 14px; }
+.tx-cat { font-size: 12px; color: var(--muted); }
+
+/* ============================================================
+   v1.2 — Acento, hero editorial, runway, quick actions
+   ============================================================ */
+
+:root {
+  --accent:      #A14B2C;
+  --accent-soft: #F5E8E1;
+  --accent-dim:  #C87A5F;
+  --sage:        #4A5F4A;
+}
+
+/* --- Hero editorial --- */
+.hero-v2 { padding: 40px 0 44px; border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+.hero-eyebrow {
+  display: flex; justify-content: space-between;
+  font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 24px;
+}
+.hero-title {
+  font-family: var(--serif); font-size: 52px; line-height: 0.98;
+  letter-spacing: -0.02em; margin: 0 0 16px; font-weight: 400;
+}
+.hero-title em { font-style: italic; color: var(--accent); }
+.hero-sub { font-size: 15px; color: var(--muted); margin: 0; }
+
+/* --- Group cards con número --- */
+.group-card { position: relative; padding: 26px 18px 20px; }
+.group-card-number {
+  position: absolute; top: 14px; right: 16px;
+  font-size: 10px; letter-spacing: 0.14em; color: var(--muted);
+}
+
+/* --- Módulos con iconos --- */
+.module-list-v2 { list-style: none; margin: 0; padding: 0; }
+.module-list-v2 li { border-bottom: 1px solid var(--line); }
+.module-list-v2 a {
+  display: flex; align-items: center; gap: 14px;
+  padding: 16px 0; color: var(--ink); text-decoration: none;
+}
+.module-list-v2 a:active { background: var(--surface); }
+.module-icon { width: 26px; height: 26px; color: var(--accent); flex: none; }
+.module-icon svg { width: 100%; height: 100%; }
+.module-info { flex: 1; min-width: 0; }
+.module-name { font-family: var(--serif); font-size: 17px; line-height: 1.1; }
+.module-sub  { font-size: 12px; color: var(--muted); margin-top: 3px; }
+
+/* --- topbar action --- */
+.topbar-action {
+  margin-left: auto; background: none; border: 1px solid var(--line);
+  border-radius: 4px; padding: 6px 12px; font-size: 12px;
+  color: var(--muted); cursor: pointer; text-decoration: none;
+}
+
+/* --- Calendar markers con color --- */
+.cal-marker.m-b  { background: var(--accent); color: var(--bg); }
+.cal-marker.m-s  { background: var(--ink);    color: var(--bg); }
+.cal-marker.m-so { background: var(--sage);   color: var(--bg); }
+.cal-marker.m-d  { background: var(--ink);    color: var(--bg); }
+.cal-marker.m-e  { background: var(--accent); color: var(--bg); }
+
+.cal-dot {
+  display: inline-block; width: 6px; height: 6px;
+  border-radius: 50%; margin-right: 2px; vertical-align: middle;
+}
+.cal-dot.inc { background: var(--accent); }
+.cal-dot.exp { background: var(--ink); }
+.cal-dot.sav { background: transparent; border: 1.5px solid var(--sage); width: 5px; height: 5px; }
+
+/* --- Runway hero --- */
+.runway-hero {
+  padding: 32px 24px; background: var(--ink); color: var(--bg);
+  border-radius: var(--radius); margin-bottom: 28px;
+}
+.runway-eyebrow {
+  font-size: 10px; letter-spacing: 0.22em; color: var(--bg);
+  opacity: 0.55; margin-bottom: 10px;
+}
+.runway-number {
+  font-family: var(--serif); font-size: 88px; line-height: 0.85;
+  letter-spacing: -0.03em; font-weight: 400; font-variant-numeric: tabular-nums;
+}
+.runway-blocks { display: flex; gap: 4px; margin: 24px 0 14px; }
+.runway-block {
+  flex: 1; height: 8px; background: rgba(255,255,255,0.15); border-radius: 1px;
+}
+.runway-block.filled { background: var(--accent); }
+.runway-meta {
+  display: flex; justify-content: space-between; font-size: 12px;
+  color: var(--bg); opacity: 0.7; font-variant-numeric: tabular-nums;
+  margin-bottom: 18px;
+}
+.runway-caption {
+  font-size: 13px; line-height: 1.55; color: var(--bg);
+  opacity: 0.65; margin: 0;
+}
+.runway-caption strong { color: var(--bg); opacity: 1; }
+
+/* --- Quick actions --- */
+.quick-actions {
+  display: grid; grid-template-columns: repeat(4, 1fr);
+  gap: 8px; margin-bottom: 4px;
+}
+.quick-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  padding: 14px 4px; background: var(--surface);
+  border: 1px solid var(--line); border-radius: var(--radius);
+  color: var(--ink); font: inherit; cursor: pointer;
+  transition: background .12s, border-color .12s;
+}
+.quick-btn:active { background: var(--accent-soft); border-color: var(--accent-dim); }
+.quick-icon { font-size: 18px; line-height: 1; font-weight: 500; }
+.quick-label { font-size: 10px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--muted); }
+.quick-accent .quick-icon { color: var(--accent); }
+
+/* --- Action form --- */
+.action-form {
+  padding: 16px; background: var(--surface);
+  border-radius: var(--radius); margin-top: 12px;
+}
+.field-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.field-row input { flex: 1; }
+.field-row button { flex: none; padding: 0 18px; }
+
+/* --- Fixed list --- */
+.fixed-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.fixed-list li {
+  display: flex; justify-content: space-between;
+  padding: 12px 0; border-bottom: 1px solid var(--line); font-size: 14px;
+}
+.fixed-list .num { font-variant-numeric: tabular-nums; color: var(--muted); }
+.fixed-total {
+  font-family: var(--serif); font-size: 16px;
+  padding-top: 14px !important;
+  border-top: 1px solid var(--ink) !important;
+  border-bottom: none !important;
+}
+.fixed-total .num { color: var(--ink); }
+
+/* --- tx signs --- */
+.tx-sign.sav { color: var(--sage); }
+
+/* ============================================================
+   v1.4 — Onboarding, markers grandes, tipos editables
+   ============================================================ */
+
+/* --- Onboarding --- */
+body.onboarding-mode {
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+}
+body.onboarding-mode #app {
+  max-width: 480px;
+  padding: 28px 24px;
+  margin: 0 auto;
+}
+.onboarding { text-align: left; }
+.onboarding-eyebrow {
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  text-transform: uppercase;
+  margin-bottom: 40px;
+}
+.onboarding-title {
+  font-family: var(--serif);
+  font-size: 64px;
+  line-height: 0.95;
+  margin: 0 0 40px;
+  letter-spacing: -0.02em;
+  font-weight: 400;
+}
+.onboarding-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 32px;
+}
+.onboarding-form input {
+  font-family: var(--serif);
+  font-size: 26px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: transparent;
+  min-height: 66px;
+}
+.onboarding-form input:focus {
+  border-color: var(--ink);
+  outline: none;
+}
+.onboarding-form button {
+  background: var(--ink);
+  color: var(--bg);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius);
+  padding: 16px 24px;
+  font: inherit;
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  min-height: 56px;
+}
+.onboarding-form button:active { opacity: .85; }
+.onboarding-hint {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  margin: 0;
+  line-height: 1.55;
+}
+
+/* --- Markers grandes y coloridos --- */
+.cal-markers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  margin-top: 2px;
+}
+.cal-marker {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  padding: 3px 6px;
+  min-width: 20px;
+  min-height: 20px;
+  border-radius: 4px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--ink);
+  color: var(--bg);
+}
+.cal-marker.type-accent { background: var(--accent); color: var(--bg); }
+.cal-marker.type-ink    { background: var(--ink);    color: var(--bg); }
+.cal-marker.type-sage   { background: var(--sage);   color: var(--bg); }
+.cal-marker.type-gold   { background: #A07D3F;        color: var(--bg); }
+.cal-marker.type-slate  { background: #4A5A6A;        color: var(--bg); }
+.cal-marker.type-plum   { background: #5F3F5F;        color: var(--bg); }
+
+/* Tinte sutil en celdas con markers */
+.cal-cell:has(.cal-marker) {
+  background: var(--surface);
+  border-color: #DADAD5;
+}
+
+/* --- Tipos editables (lista con markers inline) --- */
+.module-list .cal-marker {
+  font-size: 11px;
+  min-width: 24px;
+  min-height: 22px;
+  padding: 3px 7px;
+}

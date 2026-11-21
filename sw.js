@@ -59,3 +59,11 @@ self.addEventListener('fetch', (event) => {
     })
   );
 });
+
+const CACHE_VERSION = 'gym-tracker-v2';
+
+const CACHE_VERSION = 'gym-tracker-v3';
+
+const CACHE_VERSION = 'gym-tracker-v4';
+
+const CACHE_VERSION = 'gym-tracker-v5';
