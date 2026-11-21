@@ -890,3 +890,345 @@ body.onboarding-mode #app {
   min-height: 22px;
   padding: 3px 7px;
 }
+
+/* ============================================================
+   v1.5 — Peso, onboarding extendido, markers de peso
+   ============================================================ */
+
+/* Onboarding extendido */
+.onboarding-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.onboarding-row label,
+.onboarding-wide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.onboarding-row label > span,
+.onboarding-wide > span {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.onboarding-wide { margin-bottom: 4px; }
+.onboarding-row input,
+.onboarding-wide input {
+  font-family: var(--sans);
+  font-size: 18px;
+  padding: 12px 14px;
+  min-height: 52px;
+}
+
+/* Tarjeta de peso en home */
+.weight-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: var(--radius);
+  text-decoration: none;
+  transition: opacity .15s;
+}
+.weight-card:active { opacity: .9; }
+.weight-card-empty { background: var(--surface); color: var(--ink); border: 1px solid var(--line); }
+.weight-card-icon {
+  width: 32px; height: 32px;
+  color: var(--accent);
+  flex: none;
+}
+.weight-card-empty .weight-card-icon { color: var(--muted); }
+.weight-card-icon svg { width: 100%; height: 100%; }
+.weight-card-main { flex: 1; min-width: 0; }
+.weight-card-label {
+  font-size: 10px; letter-spacing: 0.18em;
+  color: var(--bg); opacity: 0.55; text-transform: uppercase;
+}
+.weight-card-empty .weight-card-label { color: var(--muted); opacity: 1; }
+.weight-card-value {
+  font-family: var(--serif);
+  font-size: 36px; line-height: 1;
+  margin-top: 6px;
+  font-variant-numeric: tabular-nums;
+}
+.weight-card-value .unit {
+  font-family: var(--sans);
+  font-size: 14px; opacity: 0.6; margin-left: 4px;
+}
+.weight-card-value-sm {
+  font-family: var(--serif);
+  font-size: 18px;
+  margin-top: 6px;
+}
+.weight-card-goal {
+  font-size: 12px;
+  color: var(--bg); opacity: 0.7;
+  margin-top: 6px;
+}
+.weight-card-arrow { font-size: 20px; opacity: 0.7; }
+
+/* Hero de peso (similar a runway pero más alto) */
+.weight-hero .hero-unit {
+  font-family: var(--sans);
+  font-size: 22px;
+  opacity: 0.6;
+  margin-left: 6px;
+}
+.weight-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--bg);
+  opacity: 0.7;
+  margin-top: 20px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255,255,255,0.15);
+}
+
+/* Marker de peso */
+.cal-marker.type-weight {
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 9px;
+  font-weight: 600;
+  padding: 2px 4px;
+  min-width: 0;
+  min-height: 16px;
+  letter-spacing: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============================================================
+   v1.6 — Animaciones sutiles + botón reset + form cardio
+   ============================================================ */
+
+/* Accesibilidad: respeta prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Fade general al cargar la app (una sola vez) */
+@keyframes appIn {
+  from { opacity: 0.6; }
+  to   { opacity: 1; }
+}
+#app { animation: appIn .3s ease-out both; }
+
+/* Botones — press feedback universal */
+.btn {
+  transition: transform .12s ease, opacity .15s ease,
+              background .15s ease, border-color .15s ease, color .15s ease;
+  will-change: transform;
+}
+.btn:active { transform: scale(0.97); }
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover        { background: #333; }
+  .btn.ghost:hover  { background: var(--surface); }
+}
+
+/* Group cards — lift + flecha slide */
+.group-card {
+  transition: background .15s ease, transform .12s ease;
+  will-change: transform;
+}
+.group-card:active { transform: scale(0.98); }
+.group-card .arrow {
+  display: inline-block;
+  transition: transform .2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.group-card:active .arrow { transform: translateX(4px); }
+
+/* Hero title — entrada suave al volver a home */
+@keyframes titleIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.hero-title {
+  animation: titleIn .65s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Module list — icono rota ligeramente al tocar */
+.module-list-v2 a {
+  transition: background .15s ease, padding-left .2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.module-list-v2 a:active { background: var(--surface); padding-left: 6px; }
+.module-icon {
+  transition: transform .25s cubic-bezier(0.2, 0.8, 0.2, 1), color .2s;
+}
+.module-list-v2 a:active .module-icon {
+  transform: rotate(-6deg) scale(1.1);
+}
+
+/* Calendar cells — press feedback */
+.cal-cell {
+  transition: background .12s ease, transform .12s ease, border-color .12s ease;
+}
+.cal-cell:not(.cal-empty):active { transform: scale(0.94); }
+
+/* Marker pop al aparecer */
+@keyframes markerPop {
+  0%   { transform: scale(0); }
+  60%  { transform: scale(1.15); }
+  100% { transform: scale(1); }
+}
+.cal-marker { animation: markerPop .28s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Day panel — slide up */
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.day-panel { animation: slideUp .3s cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Option pills */
+.opt-btn {
+  transition: background .15s ease, color .15s ease,
+              border-color .15s ease, transform .1s ease;
+}
+.opt-btn:active { transform: scale(0.95); }
+
+/* Quick actions */
+.quick-btn {
+  transition: background .15s ease, border-color .15s ease, transform .12s ease;
+}
+.quick-btn:active { transform: scale(0.94); }
+
+/* Weight card */
+.weight-card {
+  transition: transform .15s ease, opacity .15s ease;
+}
+.weight-card:active { transform: scale(0.985); }
+
+/* Runway hero — rise */
+@keyframes heroRise {
+  from { opacity: 0; transform: translateY(18px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.runway-hero { animation: heroRise .5s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+/* Onboarding */
+@keyframes onbTitle {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.onboarding-title {
+  animation: onbTitle .7s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes fadeSlideUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.onboarding-form {
+  animation: fadeSlideUp .55s .15s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+/* Onboarding: paso + back link */
+.onb-step {
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 20px;
+}
+.onb-back {
+  background: none;
+  border: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  padding: 14px 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: var(--line);
+  margin-top: 8px;
+  transition: opacity .15s ease;
+}
+.onb-back:active { opacity: .6; }
+
+/* Topbar: back con shift al tocar */
+.back {
+  display: inline-block;
+  transition: color .15s ease, transform .15s ease;
+}
+.back:active { transform: translateX(-2px); color: var(--ink); }
+
+/* Topbar action */
+.topbar-action {
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.topbar-action:active { background: var(--surface); color: var(--ink); }
+
+/* Supp toggle */
+.supp-toggle {
+  transition: background .15s ease, padding-left .2s ease;
+}
+.supp-toggle:active { padding-left: 6px; }
+
+/* Eliminar sesión × */
+.row-del {
+  transition: transform .15s ease, color .15s ease;
+}
+.row-del:active { transform: scale(1.35); color: #B00020; }
+
+/* Adjust buttons */
+.adjust-btn {
+  transition: transform .12s ease, border-color .15s ease, color .15s ease;
+}
+.adjust-btn:active {
+  transform: scale(0.96);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Form de cardio: campos grandes y consistentes */
+.cardio-form .field { margin-bottom: 12px; }
+.cardio-form .field:last-of-type { margin-bottom: 16px; }
+.cardio-form .btn { width: 100%; min-height: 46px; }
+
+/* ============================================================
+   Botón gigante de reset (solo desarrollador)
+   ============================================================ */
+.btn-danger-giant {
+  width: 100%;
+  padding: 22px 20px;
+  min-height: 72px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  border: 2px solid #B00020;
+  background: transparent;
+  color: #B00020;
+  border-radius: var(--radius);
+  cursor: pointer;
+  transition: transform .12s ease, background .18s ease, color .18s ease;
+  margin-top: 6px;
+}
+.btn-danger-giant:active {
+  background: #B00020;
+  color: var(--bg);
+  transform: scale(0.98);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn-danger-giant:hover {
+    background: #B00020;
+    color: var(--bg);
+  }
+}
+.dev-hint {
+  font-size: 11px;
+  letter-spacing: 0.02em;
+  color: var(--muted);
+  margin: 0 0 14px;
+  line-height: 1.55;
+}

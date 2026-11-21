@@ -3,7 +3,7 @@
    ============================================================ */
 
 const DB_NAME    = 'gym-tracker';
-const DB_VERSION = 3;
+const DB_VERSION = 4;
 
 const DEFAULT_GROUPS = [
   { id: 'chest-triceps',  name: 'Pecho',   sub: '+ Tríceps', order: 1 },
@@ -63,6 +63,10 @@ function open() {
       }
       if (!db.objectStoreNames.contains('cardioLogs')) {
         const s = db.createObjectStore('cardioLogs', { keyPath: 'id' });
+        s.createIndex('date', 'date');
+      }
+      if (!db.objectStoreNames.contains('weightLogs')) {
+        const s = db.createObjectStore('weightLogs', { keyPath: 'id' });
         s.createIndex('date', 'date');
       }
       if (!db.objectStoreNames.contains('financeTransactions')) {

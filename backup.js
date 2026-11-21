@@ -5,7 +5,7 @@
 
 const ALL_STORES = [
   'groups', 'exercises', 'sessions',
-  'supplements', 'supplementLogs', 'danceLogs', 'practiceLogs', 'cardioLogs',
+  'supplements', 'supplementLogs', 'danceLogs', 'practiceLogs', 'cardioLogs', 'weightLogs',
   'financeTransactions', 'financeGoals', 'settings',
 ];
 

@@ -19,16 +19,31 @@ function fmtMoney(n) {
   return new Intl.NumberFormat('es-MX', { minimumFractionDigits: 0, maximumFractionDigits: 2 })
     .format(Math.round(n * 100) / 100);
 }
-function fileToDataURL(file, maxSize = 1200, quality = 0.82) {
+
+function fileToDataURL(file, options = {}) {
+  const { maxSize = 1000, quality = 0.82, aspect = 4 / 3 } = options;
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => {
-      const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
-      const w = Math.round(img.width * scale);
-      const h = Math.round(img.height * scale);
+      let sw = img.width, sh = img.height, sx = 0, sy = 0;
+      if (aspect) {
+        const cur = sw / sh;
+        if (cur > aspect) {
+          const newW = sh * aspect;
+          sx = (sw - newW) / 2;
+          sw = newW;
+        } else if (cur < aspect) {
+          const newH = sw / aspect;
+          sy = (sh - newH) / 2;
+          sh = newH;
+        }
+      }
+      const scale = Math.min(1, maxSize / Math.max(sw, sh));
+      const w = Math.round(sw * scale);
+      const h = Math.round(sh * scale);
       const c = document.createElement('canvas');
       c.width = w; c.height = h;
-      c.getContext('2d').drawImage(img, 0, 0, w, h);
+      c.getContext('2d').drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
       URL.revokeObjectURL(img.src);
       resolve(c.toDataURL('image/jpeg', quality));
     };
@@ -36,6 +51,7 @@ function fileToDataURL(file, maxSize = 1200, quality = 0.82) {
     img.src = URL.createObjectURL(file);
   });
 }
+
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
@@ -47,21 +63,23 @@ const ICONS = {
   pencil: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l4-1 11-11-3-3L5 16l-1 4z"/><line x1="14" y1="6" x2="17" y2="9"/></svg>`,
   shield: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6l8-3z"/><path d="M9 12l2 2 4-4"/></svg>`,
   cardio: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h4l2-6 4 12 2-6h6"/></svg>`,
-  settings: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>`,
+  scale: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 11a4 4 0 0 1 8 0"/><line x1="12" y1="11" x2="12" y2="8"/></svg>`,
 };
 
 const App = {
   state: {
-    groups: [], exercises: [], sessions: [],
+    groups: [], exercises: [], sessions: [], weightLogs: [],
     user: null,
     lastBackupAt: null,
   },
+  _onboardingName: null,
   progressWeekOffset: 0,
   cal: {
     dance:       { year: new Date().getFullYear(), month: new Date().getMonth() },
     practice:    { year: new Date().getFullYear(), month: new Date().getMonth() },
     supplements: { year: new Date().getFullYear(), month: new Date().getMonth() },
     cardio:      { year: new Date().getFullYear(), month: new Date().getMonth() },
+    weight:      { year: new Date().getFullYear(), month: new Date().getMonth() },
     finance:     { year: new Date().getFullYear(), month: new Date().getMonth() },
   },
 
@@ -90,15 +108,44 @@ const App = {
   },
 
   async refresh() {
-    this.state.groups    = (await DB.getAll('groups')).sort((a, b) => a.order - b.order);
-    this.state.exercises = await DB.getAll('exercises');
-    this.state.sessions  = await DB.getAll('sessions');
+    this.state.groups     = (await DB.getAll('groups')).sort((a, b) => a.order - b.order);
+    this.state.exercises  = await DB.getAll('exercises');
+    this.state.sessions   = await DB.getAll('sessions');
+    this.state.weightLogs = await DB.getAll('weightLogs');
   },
 
   groupById(id)    { return this.state.groups.find(g => g.id === id); },
   exerciseById(id) { return this.state.exercises.find(e => e.id === id); },
   exercisesOf(gid) { return this.state.exercises.filter(e => e.groupId === gid); },
   sessionsOf(eid)  { return this.state.sessions.filter(s => s.exerciseId === eid).sort((a, b) => a.date.localeCompare(b.date)); },
+
+  /* ---------- Peso ---------- */
+  latestWeight() {
+    if (this.state.weightLogs.length) {
+      const sorted = [...this.state.weightLogs].sort((a, b) => b.date.localeCompare(a.date));
+      return sorted[0].weight;
+    }
+    return this.state.user?.weight || 0;
+  },
+  weightOn(date) {
+    return this.state.weightLogs.find(w => w.date === date)?.weight || null;
+  },
+  async setWeight(date, weight) {
+    const existing = this.state.weightLogs.find(w => w.date === date);
+    if (existing) {
+      await DB.put('weightLogs', { ...existing, weight });
+    } else {
+      await DB.put('weightLogs', { id: crypto.randomUUID(), date, weight });
+    }
+    await this.refresh();
+  },
+  async deleteWeight(date) {
+    const existing = this.state.weightLogs.find(w => w.date === date);
+    if (existing) {
+      await DB.delete('weightLogs', existing.id);
+      await this.refresh();
+    }
+  },
 
   route() {
     const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
@@ -115,6 +162,7 @@ const App = {
     if (parts[0] === 'dance')                  return this.renderDance();
     if (parts[0] === 'practice')               return this.renderPractice();
     if (parts[0] === 'cardio')                 return this.renderCardio();
+    if (parts[0] === 'weight')                 return this.renderWeight();
     if (parts[0] === 'finance')                return this.renderFinance();
     if (parts[0] === 'groups-manage')          return this.renderGroupsManage();
     this.renderHome();
@@ -123,31 +171,84 @@ const App = {
   mount(html) { $('#app').innerHTML = html; },
 
   /* ============================================================
-     ONBOARDING
+     ONBOARDING (2 pasos)
      ============================================================ */
   renderOnboarding() {
     document.body.classList.add('onboarding-mode');
+    this._renderOnboardingStep1();
+  },
+
+  _renderOnboardingStep1() {
     this.mount(`
       <div class="onboarding">
-        <div class="onboarding-eyebrow">GYM TRACKER · v1.4</div>
+        <div class="onboarding-eyebrow">GYM TRACKER · v1.6</div>
+        <div class="onb-step">Paso 1 de 2</div>
         <h1 class="onboarding-title">¿Cómo te<br>llamas?</h1>
-        <form id="onboardForm" class="onboarding-form">
-          <input type="text" name="name" required maxlength="30" placeholder="Tu nombre" autofocus autocomplete="off">
-          <button type="submit">Empezar →</button>
+        <form id="onboardForm1" class="onboarding-form">
+          <input type="text" name="name" required maxlength="30" placeholder="Tu nombre" autofocus autocomplete="off" value="${escapeHTML(this._onboardingName || '')}">
+          <button type="submit">Continuar →</button>
         </form>
         <p class="onboarding-hint">Tus datos viven solo en este dispositivo. Puedes exportarlos desde "Datos".</p>
       </div>
     `);
-    $('#onboardForm').addEventListener('submit', async (e) => {
+    $('#onboardForm1').addEventListener('submit', (e) => {
       e.preventDefault();
       const name = e.target.name.value.trim();
       if (!name) return;
-      const user = { name, createdAt: new Date().toISOString() };
+      this._onboardingName = name;
+      this._renderOnboardingStep2();
+    });
+  },
+
+  _renderOnboardingStep2() {
+    this.mount(`
+      <div class="onboarding">
+        <div class="onboarding-eyebrow">GYM TRACKER · v1.6</div>
+        <div class="onb-step">Paso 2 de 2 · ${escapeHTML(this._onboardingName)}</div>
+        <h1 class="onboarding-title">Tu peso,<br>tu meta.</h1>
+        <form id="onboardForm2" class="onboarding-form">
+          <div class="onboarding-row">
+            <label>
+              <span>Peso actual (kg)</span>
+              <input type="number" name="weight" min="30" max="300" step="0.1" placeholder="75" inputmode="decimal" autofocus>
+            </label>
+            <label>
+              <span>Meta (kg)</span>
+              <input type="number" name="goalWeight" min="30" max="300" step="0.1" placeholder="70" inputmode="decimal">
+            </label>
+          </div>
+          <label class="onboarding-wide">
+            <span>Estatura (cm) — opcional</span>
+            <input type="number" name="height" min="100" max="250" step="1" placeholder="175" inputmode="numeric">
+          </label>
+          <button type="submit">Empezar →</button>
+          <button type="button" class="onb-back" id="onbBack">← Atrás</button>
+        </form>
+        <p class="onboarding-hint">Puedes editar todo esto después en "Datos".</p>
+      </div>
+    `);
+    $('#onboardForm2').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const user = {
+        name: this._onboardingName,
+        weight: parseFloat(f.weight.value) || null,
+        goalWeight: parseFloat(f.goalWeight.value) || null,
+        height: parseFloat(f.height.value) || null,
+        createdAt: new Date().toISOString(),
+      };
       await DB.put('settings', { key: 'user', ...user });
+      if (user.weight) {
+        await DB.put('weightLogs', {
+          id: crypto.randomUUID(), date: todayISO(), weight: user.weight,
+        });
+      }
       this.state.user = user;
+      await this.refresh();
       document.body.classList.remove('onboarding-mode');
       this._bootstrapRouter();
     });
+    $('#onbBack').addEventListener('click', () => this._renderOnboardingStep1());
   },
 
   /* ============================================================
@@ -158,6 +259,42 @@ const App = {
     for (const e of this.state.exercises) counts[e.groupId] = (counts[e.groupId] || 0) + 1;
     const nameUpper = (this.state.user?.name || '').toUpperCase();
     const romans = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+
+    const curWeight = this.latestWeight();
+    const goalWeight = this.state.user?.goalWeight || 0;
+
+    let weightCard = '';
+    if (curWeight > 0) {
+      const delta = goalWeight ? curWeight - goalWeight : 0;
+      const deltaTxt = !goalWeight
+        ? ''
+        : Math.abs(delta) < 0.1
+          ? 'Meta alcanzada'
+          : delta > 0
+            ? `${delta.toFixed(1)} kg por bajar`
+            : `${Math.abs(delta).toFixed(1)} kg por subir`;
+      weightCard = `
+        <a href="#/weight" class="weight-card">
+          <div class="weight-card-icon">${ICONS.scale}</div>
+          <div class="weight-card-main">
+            <div class="weight-card-label">PESO ACTUAL</div>
+            <div class="weight-card-value">${curWeight.toFixed(1)}<span class="unit">kg</span></div>
+            ${goalWeight ? `<div class="weight-card-goal">Meta ${goalWeight.toFixed(1)} kg · ${deltaTxt}</div>` : ''}
+          </div>
+          <span class="weight-card-arrow">→</span>
+        </a>
+      `;
+    } else {
+      weightCard = `
+        <a href="#/weight" class="weight-card weight-card-empty">
+          <div class="weight-card-icon">${ICONS.scale}</div>
+          <div class="weight-card-main">
+            <div class="weight-card-label">PESO</div>
+            <div class="weight-card-value-sm">Registra tu peso →</div>
+          </div>
+        </a>
+      `;
+    }
 
     let backupHTML = '';
     if (this.state.lastBackupAt) {
@@ -182,6 +319,10 @@ const App = {
         </div>
         <h1 class="hero-title"><em>Train</em><br>with purpose.</h1>
         <p class="hero-sub">Registra. Analiza. Evoluciona.</p>
+      </section>
+
+      <section class="block">
+        ${weightCard}
       </section>
 
       <section class="block">
@@ -264,17 +405,11 @@ const App = {
     `);
 
     $('#manageGroupsBtn').addEventListener('click', () => { location.hash = '#/groups-manage'; });
-
-    // Cargar tipos si aún no se han cargado
-    if (!Lifestyle.state.loaded) {
-      Lifestyle.load().then(() => {
-        // silencioso — la home se actualizará al navegar
-      });
-    }
+    if (!Lifestyle.state.loaded) Lifestyle.load();
   },
 
   /* ============================================================
-     GRUPOS — gestión
+     GESTIÓN DE GRUPOS
      ============================================================ */
   renderGroupsManage() {
     this.mount(`
@@ -343,7 +478,7 @@ const App = {
   },
 
   /* ============================================================
-     GRUPO — detalle
+     GRUPO
      ============================================================ */
   renderGroup(groupId) {
     const g = this.groupById(groupId);
@@ -373,7 +508,7 @@ const App = {
           </label>
           <label class="field">
             <span class="field-label">Fotografía (opcional)</span>
-            <input type="file" name="photo" accept="image/*" capture="environment">
+            <input type="file" name="photo" accept="image/*">
           </label>
           <div class="photo-preview" id="preview"></div>
           <button type="submit" class="btn">Crear ejercicio</button>
@@ -386,8 +521,10 @@ const App = {
     $('input[name="photo"]', form).addEventListener('change', async (e) => {
       const f = e.target.files[0];
       if (!f) { preview.innerHTML = ''; return; }
-      try { preview.innerHTML = `<img src="${await fileToDataURL(f)}" alt="">`; }
-      catch { preview.innerHTML = ''; }
+      try {
+        const dataUrl = await fileToDataURL(f, { aspect: 4 / 3, maxSize: 1000 });
+        preview.innerHTML = `<img src="${dataUrl}" alt="">`;
+      } catch { preview.innerHTML = ''; }
     });
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -395,7 +532,7 @@ const App = {
       if (!name) return;
       const file = form.photo.files[0];
       let photo = null;
-      if (file) { try { photo = await fileToDataURL(file); } catch {} }
+      if (file) { try { photo = await fileToDataURL(file, { aspect: 4 / 3, maxSize: 1000 }); } catch {} }
       await DB.put('exercises', {
         id: crypto.randomUUID(), groupId, name, photo,
         createdAt: new Date().toISOString(),
@@ -527,7 +664,7 @@ const App = {
 
         <label class="field">
           <span class="field-label">${ex.photo ? 'Reemplazar foto' : 'Añadir foto'} (opcional)</span>
-          <input type="file" name="photo" accept="image/*" capture="environment">
+          <input type="file" name="photo" accept="image/*">
         </label>
 
         <div class="stack">
@@ -547,7 +684,7 @@ const App = {
       let photo = ex.photo;
       if (f.removePhoto?.checked) photo = null;
       const file = f.photo.files[0];
-      if (file) { try { photo = await fileToDataURL(file); } catch {} }
+      if (file) { try { photo = await fileToDataURL(file, { aspect: 4 / 3, maxSize: 1000 }); } catch {} }
       await DB.put('exercises', { ...ex, name, groupId: f.groupId.value, photo });
       await this.refresh();
       location.hash = `#/e/${ex.id}`;
@@ -708,12 +845,166 @@ const App = {
   },
 
   /* ============================================================
+     PESO
+     ============================================================ */
+  renderWeight() {
+    const cal = this.cal.weight;
+    const curWeight = this.latestWeight();
+    const goalWeight = this.state.user?.goalWeight || 0;
+    const startWeight = this.state.user?.weight || 0;
+    const monthPrefix = `${cal.year}-${String(cal.month + 1).padStart(2, '0')}`;
+
+    const monthLogs = this.state.weightLogs
+      .filter(w => w.date.startsWith(monthPrefix))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const markersForDate = (iso) => {
+      const w = this.weightOn(iso);
+      if (w == null) return null;
+      return { markers: [`<span class="cal-marker type-weight">${w.toFixed(1)}</span>`] };
+    };
+
+    const allPoints = [...this.state.weightLogs]
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .map(l => ({ x: l.date, y: l.weight }));
+
+    let deltaFromStart = null;
+    if (startWeight && curWeight) deltaFromStart = curWeight - startWeight;
+    const deltaStartTxt = deltaFromStart == null
+      ? ''
+      : Math.abs(deltaFromStart) < 0.1
+        ? 'sin cambios'
+        : deltaFromStart > 0
+          ? `+${deltaFromStart.toFixed(1)} kg`
+          : `${deltaFromStart.toFixed(1)} kg`;
+
+    const goalTxt = !goalWeight || !curWeight
+      ? ''
+      : Math.abs(curWeight - goalWeight) < 0.1
+        ? 'Meta alcanzada ✓'
+        : curWeight > goalWeight
+          ? `Faltan ${(curWeight - goalWeight).toFixed(1)} kg`
+          : `Faltan ${(goalWeight - curWeight).toFixed(1)} kg por subir`;
+
+    this.mount(`
+      <header class="topbar">
+        <a class="back" href="#/">Inicio</a>
+        <div class="topbar-title">Peso</div>
+      </header>
+
+      <section class="runway-hero weight-hero">
+        <div class="runway-eyebrow">PESO ACTUAL</div>
+        <div class="runway-number">${curWeight ? curWeight.toFixed(1) : '—'}<span class="hero-unit">kg</span></div>
+        <div class="weight-meta">
+          ${goalWeight ? `<span>Meta ${goalWeight.toFixed(1)} kg</span>` : '<span>Sin meta</span>'}
+          ${deltaStartTxt ? `<span>Desde inicio ${deltaStartTxt}</span>` : ''}
+        </div>
+        ${goalTxt ? `<p class="runway-caption">${goalTxt}</p>` : ''}
+      </section>
+
+      <section class="block">
+        <div class="label">Evolución</div>
+        ${allPoints.length >= 2
+          ? Charts.line(allPoints, { fmtX: Reports.fmtHuman, fmtY: v => `${v.toFixed(0)}` })
+          : `<p class="empty">Registra al menos dos pesos para ver la tendencia.</p>`}
+      </section>
+
+      <section class="block">
+        <div class="label">Calendario</div>
+        <div class="monthnav">
+          <button class="weekbtn" id="calPrev">←</button>
+          <div class="weeklabel">${Calendar.monthLabel(cal.year, cal.month)}</div>
+          <button class="weekbtn" id="calNext">→</button>
+        </div>
+        <div id="calRoot">${Calendar.build({ year: cal.year, month: cal.month, markersForDate })}</div>
+        <div id="dayPanel"></div>
+        <p class="hint" style="margin-top:16px;">Toca un día para registrar o ajustar tu peso.</p>
+      </section>
+
+      <section class="block">
+        <div class="label">Últimos registros</div>
+        ${monthLogs.length ? `
+          <table>
+            <thead><tr><th>Fecha</th><th class="num">Peso</th><th></th></tr></thead>
+            <tbody>
+              ${[...monthLogs].reverse().map(l => `
+                <tr>
+                  <td>${Reports.fmtHuman(l.date)}</td>
+                  <td class="num">${l.weight.toFixed(1)} kg</td>
+                  <td class="num"><button class="row-del" data-delw="${l.date}">×</button></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : `<p class="empty">Sin registros este mes.</p>`}
+      </section>
+    `);
+
+    $('#calPrev').addEventListener('click', () => { this._shiftMonth('weight', -1); this.renderWeight(); });
+    $('#calNext').addEventListener('click', () => { this._shiftMonth('weight',  1); this.renderWeight(); });
+
+    $$('[data-delw]').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('¿Eliminar este registro?')) return;
+      await this.deleteWeight(b.dataset.delw);
+      this.renderWeight();
+    }));
+
+    Calendar.attach($('#calRoot'), (iso) => {
+      const panel = $('#dayPanel');
+      const w = this.weightOn(iso);
+      panel.innerHTML = `
+        <div class="day-panel">
+          <div class="day-panel-head">
+            <div class="day-panel-date">${Reports.fmtHuman(iso)}</div>
+            <button class="day-panel-close" id="dpClose">×</button>
+          </div>
+          <form id="weightForm" class="action-form" style="margin-top:0;">
+            <div class="field-row">
+              <input type="number" name="weight" min="30" max="300" step="0.1" required inputmode="decimal"
+                     value="${w != null ? w : ''}" placeholder="kg" autofocus>
+              <button type="submit" class="btn">Guardar</button>
+            </div>
+            ${w != null ? `<button type="button" class="adjust-btn" id="delWeightBtn" style="width:100%;margin-top:8px;">Eliminar registro</button>` : ''}
+          </form>
+        </div>`;
+      $('#dpClose').addEventListener('click', () => { panel.innerHTML = ''; });
+      $('#weightForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const val = parseFloat(e.target.weight.value);
+        if (!val) return;
+        await this.setWeight(iso, val);
+        this.renderWeight();
+      });
+      if (w != null) {
+        $('#delWeightBtn').addEventListener('click', async () => {
+          await this.deleteWeight(iso);
+          this.renderWeight();
+        });
+      }
+    });
+  },
+
+  /* ============================================================
      SUPLEMENTOS
      ============================================================ */
   async renderSupplements() {
     if (!Lifestyle.state.loaded) await Lifestyle.load();
     const today = todayISO();
     const cal = this.cal.supplements;
+    const monthPrefix = `${cal.year}-${String(cal.month + 1).padStart(2, '0')}`;
+
+    const monthlyCounts = {};
+    for (const log of Lifestyle.state.supplementLogs) {
+      if (!log.date.startsWith(monthPrefix)) continue;
+      monthlyCounts[log.supplementId] = (monthlyCounts[log.supplementId] || 0) + 1;
+    }
+    const barItems = Lifestyle.state.supplements
+      .map(s => ({
+        label: s.name,
+        value: monthlyCounts[s.id] || 0,
+        display: `${monthlyCounts[s.id] || 0}d`,
+      }))
+      .filter(i => i.value > 0);
 
     const markersForDate = (iso) => {
       const taken = Lifestyle.supplementsTakenOn(iso);
@@ -753,6 +1044,13 @@ const App = {
           </label>
           <button type="submit" class="btn">Añadir</button>
         </form>
+      </section>
+
+      <section class="block">
+        <div class="label">Este mes</div>
+        ${barItems.length
+          ? Charts.bars(barItems)
+          : `<p class="empty">Sin tomas registradas este mes.</p>`}
       </section>
 
       <section class="block">
@@ -832,6 +1130,20 @@ const App = {
     if (!Lifestyle.state.loaded) await Lifestyle.load();
     const cal = this.cal.dance;
     const typeMap = Object.fromEntries(Lifestyle.state.danceTypes.map(t => [t.code, t]));
+    const monthPrefix = `${cal.year}-${String(cal.month + 1).padStart(2, '0')}`;
+
+    const monthlyCounts = {};
+    for (const log of Lifestyle.state.danceLogs) {
+      if (!log.date.startsWith(monthPrefix)) continue;
+      monthlyCounts[log.type] = (monthlyCounts[log.type] || 0) + 1;
+    }
+    const barItems = Lifestyle.state.danceTypes
+      .map(t => ({
+        label: t.label,
+        value: monthlyCounts[t.code] || 0,
+        display: String(monthlyCounts[t.code] || 0),
+      }))
+      .filter(i => i.value > 0);
 
     const markersForDate = (iso) => {
       const codes = Lifestyle.danceTypesOn(iso);
@@ -853,7 +1165,14 @@ const App = {
       </header>
 
       <section class="block">
-        <div class="label">${Lifestyle.state.danceTypes.map(t => t.label).join(' · ') || 'Sin tipos'}</div>
+        <div class="label">Este mes</div>
+        ${barItems.length
+          ? Charts.bars(barItems)
+          : `<p class="empty">Sin registros este mes.</p>`}
+      </section>
+
+      <section class="block">
+        <div class="label">Calendario</div>
         <div class="monthnav">
           <button class="weekbtn" id="calPrev">←</button>
           <div class="weeklabel">${Calendar.monthLabel(cal.year, cal.month)}</div>
@@ -946,6 +1265,20 @@ const App = {
     if (!Lifestyle.state.loaded) await Lifestyle.load();
     const cal = this.cal.practice;
     const typeMap = Object.fromEntries(Lifestyle.state.practiceTypes.map(t => [t.code, t]));
+    const monthPrefix = `${cal.year}-${String(cal.month + 1).padStart(2, '0')}`;
+
+    const monthlyCounts = {};
+    for (const log of Lifestyle.state.practiceLogs) {
+      if (!log.date.startsWith(monthPrefix)) continue;
+      monthlyCounts[log.type] = (monthlyCounts[log.type] || 0) + 1;
+    }
+    const barItems = Lifestyle.state.practiceTypes
+      .map(t => ({
+        label: t.label,
+        value: monthlyCounts[t.code] || 0,
+        display: String(monthlyCounts[t.code] || 0),
+      }))
+      .filter(i => i.value > 0);
 
     const markersForDate = (iso) => {
       const codes = Lifestyle.practiceTypesOn(iso);
@@ -978,6 +1311,13 @@ const App = {
           <div class="stat"><div class="stat-label">Meta</div>
             <div class="stat-value">${goalMet ? '✓' : '—'}<span class="unit">${goalMet ? 'cumplida' : 'pendiente'}</span></div></div>
         </div>
+      </section>
+
+      <section class="block">
+        <div class="label">Este mes</div>
+        ${barItems.length
+          ? Charts.bars(barItems)
+          : `<p class="empty">Sin registros este mes.</p>`}
       </section>
 
       <section class="block">
@@ -1073,6 +1413,20 @@ const App = {
   async renderCardio() {
     if (!Lifestyle.state.loaded) await Lifestyle.load();
     const cal = this.cal.cardio;
+    const monthPrefix = `${cal.year}-${String(cal.month + 1).padStart(2, '0')}`;
+
+    const byLocation = {};
+    let totalMinutes = 0;
+    let sessionCount = 0;
+    for (const l of Lifestyle.state.cardioLogs) {
+      if (!l.date.startsWith(monthPrefix)) continue;
+      byLocation[l.location] = (byLocation[l.location] || 0) + l.minutes;
+      totalMinutes += l.minutes;
+      sessionCount++;
+    }
+    const barItems = Object.entries(byLocation)
+      .sort((a, b) => b[1] - a[1])
+      .map(([loc, mins]) => ({ label: loc, value: mins, display: `${mins}m` }));
 
     const markersForDate = (iso) => {
       const mins = Lifestyle.cardioMinutesOn(iso);
@@ -1091,6 +1445,20 @@ const App = {
       </header>
 
       <section class="block">
+        <div class="label">Este mes</div>
+        <div class="stats">
+          <div class="stat"><div class="stat-label">Sesiones</div>
+            <div class="stat-value">${sessionCount}</div></div>
+          <div class="stat"><div class="stat-label">Minutos</div>
+            <div class="stat-value">${totalMinutes}</div></div>
+        </div>
+        ${barItems.length
+          ? `<div style="margin-top:20px;">${Charts.bars(barItems)}</div>`
+          : `<p class="empty">Sin registros este mes.</p>`}
+      </section>
+
+      <section class="block">
+        <div class="label">Calendario</div>
         <div class="monthnav">
           <button class="weekbtn" id="calPrev">←</button>
           <div class="weeklabel">${Calendar.monthLabel(cal.year, cal.month)}</div>
@@ -1098,7 +1466,7 @@ const App = {
         </div>
         <div id="calRoot">${Calendar.build({ year: cal.year, month: cal.month, markersForDate })}</div>
         <div id="dayPanel"></div>
-        <p class="hint" style="margin-top:16px;">Toca un día para registrar o editar cardio.</p>
+        <p class="hint" style="margin-top:16px;">Toca un día para registrar cardio.</p>
       </section>
 
       <section class="block">
@@ -1138,17 +1506,22 @@ const App = {
             <button class="day-panel-close" id="dpClose">×</button>
           </div>
           <ul class="tx-list">${entriesHTML}</ul>
-          <form id="cardioForm" class="action-form" style="margin-top:12px;">
-            <div class="field-row">
+          <form id="cardioForm" class="action-form cardio-form" style="margin-top:12px;">
+            <label class="field">
+              <span class="field-label">Ubicación</span>
               <select name="location" required>
                 ${CARDIO_LOCATIONS.map(l => `<option>${l}</option>`).join('')}
               </select>
-              <input type="number" name="minutes" required min="1" max="600" step="1" placeholder="min" style="max-width:90px;" inputmode="numeric">
-            </div>
-            <div class="field-row">
-              <input type="text" name="resistance" maxlength="30" placeholder="Resistencia (opcional)">
-              <button type="submit" class="btn" style="padding:0 20px;">+</button>
-            </div>
+            </label>
+            <label class="field">
+              <span class="field-label">Tiempo del ejercicio (min)</span>
+              <input type="number" name="minutes" required min="1" max="600" step="1" placeholder="30" inputmode="numeric">
+            </label>
+            <label class="field">
+              <span class="field-label">Resistencia (opcional)</span>
+              <input type="text" name="resistance" maxlength="30" placeholder="Nivel, inclinación, velocidad…">
+            </label>
+            <button type="submit" class="btn">+ Añadir sesión</button>
           </form>
         </div>`;
       $('#dpClose').addEventListener('click', () => { panel.innerHTML = ''; });
@@ -1617,21 +1990,25 @@ const App = {
     const prefix = `${year}-${String(month + 1).padStart(2, '0')}`;
     const monthLabel = Calendar.monthLabel(year, month);
 
-    // Gym
     const monthSessions = this.state.sessions.filter(s => s.date.startsWith(prefix));
     const uniqueDays = new Set(monthSessions.map(s => s.date)).size;
     const uniqueExercises = new Set(monthSessions.map(s => s.exerciseId)).size;
     const volume = monthSessions.reduce((acc, s) =>
       acc + s.sets.reduce((a, set) => a + (set.weight || 0) * (set.reps || 0), 0), 0);
 
-    // Cardio
     const cardioLogs = Lifestyle.state.cardioLogs.filter(l => l.date.startsWith(prefix));
     const cardioMinutes = cardioLogs.reduce((a, l) => a + (l.minutes || 0), 0);
     const cardioByLocation = {};
     for (const l of cardioLogs) cardioByLocation[l.location] = (cardioByLocation[l.location] || 0) + l.minutes;
     const cardioTop = Object.entries(cardioByLocation).sort((a, b) => b[1] - a[1]);
 
-    // Suplementos
+    const weightLogs = this.state.weightLogs
+      .filter(w => w.date.startsWith(prefix))
+      .sort((a, b) => a.date.localeCompare(b.date));
+    const startW = weightLogs[0]?.weight;
+    const endW = weightLogs[weightLogs.length - 1]?.weight;
+    const weightDelta = (startW != null && endW != null) ? endW - startW : null;
+
     const suppCounts = {};
     for (const log of Lifestyle.state.supplementLogs) {
       if (!log.date.startsWith(prefix)) continue;
@@ -1642,7 +2019,6 @@ const App = {
       .filter(r => r.days > 0)
       .sort((a, b) => b.days - a.days);
 
-    // Baile
     const danceCounts = {};
     for (const log of Lifestyle.state.danceLogs) {
       if (!log.date.startsWith(prefix)) continue;
@@ -1652,7 +2028,6 @@ const App = {
       .map(t => ({ label: t.label, count: danceCounts[t.code] || 0 }))
       .filter(r => r.count > 0);
 
-    // Práctica
     const pracCounts = {};
     for (const log of Lifestyle.state.practiceLogs) {
       if (!log.date.startsWith(prefix)) continue;
@@ -1662,7 +2037,6 @@ const App = {
       .map(t => ({ label: t.label, count: pracCounts[t.code] || 0 }))
       .filter(r => r.count > 0);
 
-    // Dinero
     let financeHTML = `<p class="hint">Sección de dinero bloqueada. Ábrela y vuelve aquí.</p>`;
     if (Finance.state.hasPassword && Finance.state.unlocked) {
       const totals = Finance.monthlyTotals(year, month);
@@ -1712,6 +2086,12 @@ const App = {
       `;
     }
 
+    const weightDeltaTxt = weightDelta == null
+      ? '<p class="empty">Sin registros este mes.</p>'
+      : Math.abs(weightDelta) < 0.1
+        ? '<p class="hint">Sin cambios significativos.</p>'
+        : `<p class="hint">${weightDelta > 0 ? '+' : ''}${weightDelta.toFixed(1)} kg ${weightDelta > 0 ? 'ganados' : 'perdidos'} este mes (${startW.toFixed(1)} → ${endW.toFixed(1)}).</p>`;
+
     this.mount(`
       <header class="topbar">
         <a class="back" href="#/">Inicio</a>
@@ -1730,6 +2110,11 @@ const App = {
           <div class="stat"><div class="stat-label">Sesiones</div>
             <div class="stat-value">${monthSessions.length}</div></div>
         </div>
+      </section>
+
+      <section class="block">
+        <div class="label">Peso</div>
+        ${weightDeltaTxt}
       </section>
 
       <section class="block">
@@ -1797,6 +2182,7 @@ const App = {
      DATOS Y RESPALDO
      ============================================================ */
   renderData() {
+    const u = this.state.user || {};
     this.mount(`
       <header class="topbar">
         <a class="back" href="#/">Inicio</a>
@@ -1804,17 +2190,34 @@ const App = {
       </header>
 
       <section class="block">
-        <div class="label">Tu nombre</div>
-        <label class="field">
-          <input type="text" id="userNameInput" maxlength="30" value="${escapeHTML(this.state.user?.name || '')}">
-        </label>
-        <button class="btn small ghost" id="saveNameBtn">Guardar nombre</button>
+        <div class="label">Tu perfil</div>
+        <form id="profileForm">
+          <label class="field">
+            <span class="field-label">Nombre</span>
+            <input type="text" name="name" maxlength="30" value="${escapeHTML(u.name || '')}">
+          </label>
+          <div class="two-col">
+            <label class="field">
+              <span class="field-label">Estatura (cm)</span>
+              <input type="number" name="height" min="100" max="250" step="1" inputmode="numeric" value="${u.height || ''}">
+            </label>
+            <label class="field">
+              <span class="field-label">Peso inicial (kg)</span>
+              <input type="number" name="weight" min="30" max="300" step="0.1" inputmode="decimal" value="${u.weight || ''}">
+            </label>
+          </div>
+          <label class="field">
+            <span class="field-label">Meta de peso (kg)</span>
+            <input type="number" name="goalWeight" min="30" max="300" step="0.1" inputmode="decimal" value="${u.goalWeight || ''}">
+          </label>
+          <button class="btn" type="submit">Guardar perfil</button>
+        </form>
       </section>
 
       <section class="block">
         <p class="hint">
           Tus datos viven solo en este navegador. Exporta respaldo con regularidad.
-          El respaldo incluye entrenamiento, suplementos, cardio, baile, práctica y finanzas.
+          El respaldo incluye entrenamiento, cardio, peso, suplementos, baile, práctica y finanzas.
         </p>
         <div class="stack">
           <button class="btn" id="exportBtn">Exportar respaldo (JSON)</button>
@@ -1833,15 +2236,33 @@ const App = {
         <div class="label">Zona peligrosa</div>
         <button class="btn ghost" id="clearBtn" style="border-color:#B00020;color:#B00020;">Borrar entrenamientos</button>
       </section>
+
+      <section class="block">
+        <div class="label">Desarrollador</div>
+        <p class="dev-hint">
+          Borra TODA la base de datos local: entrenamiento, cardio, peso, suplementos, baile,
+          práctica, finanzas y perfil. La app vuelve al onboarding como recién instalada.
+          Úsalo para probar la experiencia inicial.
+        </p>
+        <button class="btn-danger-giant" id="resetAllBtn">
+          Borrar TODO y reiniciar
+        </button>
+      </section>
     `);
 
-    $('#saveNameBtn').addEventListener('click', async () => {
-      const name = $('#userNameInput').value.trim();
-      if (!name) return;
-      const user = { ...this.state.user, name };
+    $('#profileForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const f = e.target;
+      const user = {
+        ...this.state.user,
+        name: f.name.value.trim() || this.state.user?.name,
+        height: parseFloat(f.height.value) || null,
+        weight: parseFloat(f.weight.value) || null,
+        goalWeight: parseFloat(f.goalWeight.value) || null,
+      };
       await DB.put('settings', { key: 'user', ...user });
       this.state.user = user;
-      alert('Nombre actualizado.');
+      alert('Perfil actualizado.');
     });
 
     $('#exportBtn').addEventListener('click', async () => {
@@ -1867,6 +2288,24 @@ const App = {
       await Backup.clearAll();
       await this.refresh();
       location.hash = '#/';
+    });
+
+    $('#resetAllBtn').addEventListener('click', async () => {
+      if (!confirm('Esto borrará TODOS los datos de la app: entrenamiento, cardio, peso, suplementos, baile, práctica, finanzas y tu perfil.\n\n¿Continuar?')) return;
+      if (!confirm('Segunda confirmación: NO se puede deshacer. La app se reiniciará al onboarding.\n\n¿Estás seguro?')) return;
+
+      const stores = [
+        'groups', 'exercises', 'sessions',
+        'supplements', 'supplementLogs', 'danceLogs', 'practiceLogs',
+        'cardioLogs', 'weightLogs',
+        'financeTransactions', 'financeGoals', 'settings',
+      ];
+      for (const s of stores) {
+        try { await DB.clear(s); } catch {}
+      }
+      try { sessionStorage.clear(); } catch {}
+      location.hash = '';
+      location.reload();
     });
   },
 

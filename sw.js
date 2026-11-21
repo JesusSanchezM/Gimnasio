@@ -67,3 +67,7 @@ const CACHE_VERSION = 'gym-tracker-v3';
 const CACHE_VERSION = 'gym-tracker-v4';
 
 const CACHE_VERSION = 'gym-tracker-v5';
+
+const CACHE_VERSION = 'gym-tracker-v6';
+
+const CACHE_VERSION = 'gym-tracker-v7';
